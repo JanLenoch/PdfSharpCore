@@ -4738,5 +4738,15 @@ namespace PdfSharpCore.Drawing  // #??? aufräumen
                 return new XRect(xmin, ymin, xmax - xmin, ymax - ymin);
             }
         }
+
+        public void BeginMarkedContentPropList(string layerName)
+        {
+            (_renderer as XGraphicsPdfRenderer).BeginMarkedContentPropList(layerName);
+        }
+
+        public void EndMarkedContent()
+        {
+            (_renderer as XGraphicsPdfRenderer).EndMarkedContent();
+        }
     }
 }

@@ -2100,5 +2100,15 @@ namespace PdfSharpCore.Drawing.Pdf
         /// The final transformation from the world space to the default page space.
         /// </summary>
         public XMatrix DefaultViewMatrix;
+
+        public void BeginMarkedContentPropList(string layerName)
+        {
+            _content.Append(" /OC /" + layerName + " BDC ");
+        }
+
+        public void EndMarkedContent()
+        {
+            _content.Append(" EMC ");
+        }
     }
 }
