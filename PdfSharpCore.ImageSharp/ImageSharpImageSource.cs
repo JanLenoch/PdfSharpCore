@@ -2,12 +2,15 @@
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
-using ImageSharp;
+using SixLabors.ImageSharp;
 using MigraDocCore.DocumentObjectModel.MigraDoc.DocumentObjectModel.Shapes;
 using static MigraDocCore.DocumentObjectModel.MigraDoc.DocumentObjectModel.Shapes.ImageSource;
-using ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats;
 using System.Threading;
 using System.Threading.Tasks;
+using SixLabors.Primitives;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Formats.Jpeg;
 
 namespace PdfSharpCore.ImageSharp
 {
@@ -17,7 +20,7 @@ namespace PdfSharpCore.ImageSharp
         {
             return new ImageSharpImageSourceImpl(name, () =>
             {
-                return new Image(imageSource.Invoke());
+                return Image.Load(imageSource.Invoke());
             }, (int)quality);
         }
 
@@ -25,7 +28,7 @@ namespace PdfSharpCore.ImageSharp
         {
             return new ImageSharpImageSourceImpl(path, () =>
             {
-                return new Image(path);
+                return Image.Load(path);
             }, (int)quality);
         }
 
@@ -35,7 +38,7 @@ namespace PdfSharpCore.ImageSharp
             {
                 using (var stream = imageStream.Invoke())
                 {
-                    return new Image(stream);
+                    return Image.Load(stream);
                 }
             }, (int)quality);
         }
@@ -43,8 +46,8 @@ namespace PdfSharpCore.ImageSharp
         private class ImageSharpImageSourceImpl : IImageSource
         {
 
-            private Image _image;
-            private Image Image
+            private Image<Rgba32> _image;
+            private Image<Rgba32> Image
             {
                 get
                 {
@@ -55,14 +58,14 @@ namespace PdfSharpCore.ImageSharp
                     return _image;
                 }
             }
-            private Func<Image> _getImage;
+            private Func<Image<Rgba32>> _getImage;
             private readonly int _quality;
 
             public int Width => Image.Width;
             public int Height => Image.Height;
             public string Name { get; }
 
-            public ImageSharpImageSourceImpl(string name, Func<Image> getImage, int quality)
+            public ImageSharpImageSourceImpl(string name, Func<Image<Rgba32>> getImage, int quality)
             {
                 Name = name;
                 _getImage = getImage;
@@ -75,9 +78,10 @@ namespace PdfSharpCore.ImageSharp
                 ct.Register(() => {
                     tcs.TrySetCanceled();
                 });
+                var imageProcessingContext = new ImageProcessingContext<Rgba32>(Image, false);
                 var task = Task.Run(() => {
-                    Image.AutoOrient();
-                    Image.SaveAsJpeg(ms, new JpegEncoderOptions() { Quality = _quality });
+                    imageProcessingContext.AutoOrient();
+                    Image.SaveAsJpeg(ms, new JpegEncoder() { Quality = _quality });
                 });
                 Task.WaitAny(task, tcs.Task);
                 tcs.TrySetCanceled();
@@ -89,6 +93,57 @@ namespace PdfSharpCore.ImageSharp
             {
                 Image.Dispose();
             }
+        }
+    }
+
+    public class ImageProcessingContext<TPixel> : IImageProcessingContext<TPixel>
+    where TPixel : struct, IPixel<TPixel>
+    {
+        public Image<TPixel> source;
+
+        public List<AppliedOpperation> applied = new List<AppliedOpperation>();
+        public bool mutate;
+
+        public ImageProcessingContext(Image<TPixel> source, bool mutate)
+        {
+            this.mutate = mutate;
+            if (mutate)
+            {
+                this.source = source;
+            }
+            else
+            {
+                this.source = source?.Clone();
+            }
+        }
+
+        public Image<TPixel> Apply()
+        {
+            return source;
+        }
+
+        public IImageProcessingContext<TPixel> ApplyProcessor(IImageProcessor<TPixel> processor, Rectangle rectangle)
+        {
+            applied.Add(new AppliedOpperation
+            {
+                Processor = processor,
+                Rectangle = rectangle
+            });
+            return this;
+        }
+
+        public IImageProcessingContext<TPixel> ApplyProcessor(IImageProcessor<TPixel> processor)
+        {
+            applied.Add(new AppliedOpperation
+            {
+                Processor = processor
+            });
+            return this;
+        }
+        public struct AppliedOpperation
+        {
+            public Rectangle? Rectangle { get; set; }
+            public IImageProcessor<TPixel> Processor { get; set; }
         }
     }
 }

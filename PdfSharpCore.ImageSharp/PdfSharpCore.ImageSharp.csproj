@@ -23,14 +23,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ImageSharp" Version="1.0.0-alpha2-00115" />
-    <PackageReference Include="ImageSharp.Formats.Jpeg" Version="1.0.0-alpha2-00115" />
-    <PackageReference Include="ImageSharp.Processing" Version="1.0.0-alpha2-00103" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0001" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\PdfSharpCore\PdfSharpCore.csproj" />
-    <ProjectReference Include="..\PdfSharp\PdfSharpCore.csproj" />
   </ItemGroup>
 
 </Project>
